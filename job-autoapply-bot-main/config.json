@@ -1,5 +1,26 @@
 {
-  "keywords": ["python", "automation", "entry level", "remote", "developer", "ai", "it"],
+"keywords": [
+  "Linux",
+  "System Administrator",
+  "Red Hat",
+  "Ubuntu",
+  "CentOS",
+  "Ansible",
+  "Shell Scripting",
+  "Bash",
+  "Python",
+  "Terraform",
+  "AWS",
+  "VMware",
+  "DevOps",
+  "Network Administration",
+  "IT",
+  "Entry Level",
+  "JavaScript",
+  "React"
+]
+
+
   "max_results": 50,
   "resume_path": "resume.pdf",
   "user_data": {
