@@ -11,14 +11,19 @@
   "Python",
   "Terraform",
   "AWS",
+  "Azure",
+  "Google Cloud Platform",
+  "OCI",
+  "Kubernetes",
   "VMware",
   "DevOps",
   "Network Administration",
   "IT",
   "Entry Level",
   "JavaScript",
-  "React"
-]
+  "React",
+  "Git"
+],
 
 
   "max_results": 50,
