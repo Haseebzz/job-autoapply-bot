@@ -35,9 +35,10 @@ USER_DATA   = config.get("user_data", {})
 CSV_PATH    = "applied_jobs.csv"
 
 # Airtable ENV + client
-AIRTABLE_TOKEN      = os.getenv("AIRTABLE_TOKEN")
-AIRTABLE_BASE_ID    = os.getenv("AIRTABLE_BASE_ID")
-AIRTABLE_TABLE_NAME = os.getenv("AIRTABLE_TABLE_NAME")
+AIRTABLE_TOKEN = "patzGCTaGr99tjLxi.f6f3645188bea152bec2f1d78a5f17cdbbc5f449aa09c5cc8f3225ccae9e9256"
+AIRTABLE_BASE_ID = "appnHuLf8g8SIpRgD"
+AIRTABLE_TABLE_NAME = "tblPkomZhDDhH3Gds"
+
 airtable = Table(AIRTABLE_TOKEN, AIRTABLE_BASE_ID, AIRTABLE_TABLE_NAME)
 
 def load_applied_urls():
