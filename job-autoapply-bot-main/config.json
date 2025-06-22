@@ -1,0 +1,15 @@
+{
+  "keywords": ["python", "automation", "entry level", "remote", "developer", "ai", "it"],
+  "max_results": 50,
+  "resume_path": "resume.pdf",
+  "user_data": {
+    "full_name": "Haseeb Chaudhury",
+    "email": "chaudhuryhaseeb@gmail.com",
+    "phone": "9292455332",
+    "linkedin": "https://www.linkedin.com/in/haseebchaudhury/"
+  },
+  "location_filter": ""
+
+
+
+}
