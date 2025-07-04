@@ -220,25 +220,29 @@ def get_jobs():
 from selenium.webdriver.chrome.service import Service
 import shutil
 
+from selenium.webdriver.chrome.service import Service
+import shutil
+
 def apply_to_job(job):
     print(f"[AUTO] Applying → {job['url']}", flush=True)
 
-    print("CHROMEDRIVER_PATH =", os.getenv("CHROMEDRIVER_PATH", "/usr/bin/chromedriver"))
+    # Debug check
     print("Chrome path:", shutil.which("chromium"))
     print("Chromedriver path:", shutil.which("chromedriver"))
 
     opts = Options()
-    opts.add_argument("--headless=new")  # More stable for newer versions
+    opts.add_argument("--headless=new")
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
 
-    service = Service("/usr/bin/chromedriver")  # Explicit path
+    # Explicit Service override (this is key!)
+    service = Service("/usr/bin/chromedriver")
 
     try:
-        from selenium.webdriver.chrome.service import Service
-        driver = webdriver.Chrome(service=Service("/usr/bin/chromedriver"), options=opts)
+        driver = webdriver.Chrome(service=service, options=opts)  # <- THIS LINE
         driver.get(job["url"])
         time.sleep(4)
+
         for inp in driver.find_elements(By.TAG_NAME, "input"):
             name = inp.get_attribute("name") or ""
             if "email" in name.lower():
@@ -254,25 +258,14 @@ def apply_to_job(job):
             if "submit" in t or "apply" in t:
                 btn.click()
                 break
+
         print("[AUTO] Success", flush=True)
+
     except Exception as e:
         print(f"[AUTO ERROR] {e}", flush=True)
+
     finally:
         driver.quit()
-
-def bot_cycle():
-    applied = load_applied_urls()
-    print(f"[BOT] {len(applied)} URLs loaded", flush=True)
-    jobs = get_jobs()
-    print(f"[BOT] {len(jobs)} jobs fetched", flush=True)
-    for job in jobs:
-        if job["url"] in applied:
-            print(f"[BOT] Skipping {job['url']}", flush=True)
-            continue
-        apply_to_job(job)
-        log_application(job)
-        applied.add(job["url"])
-    print("[BOT] Cycle complete", flush=True)
 
 def scheduler():
     bot_cycle()
