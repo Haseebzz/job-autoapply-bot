@@ -4,19 +4,22 @@ import csv
 import json
 import datetime
 import threading
+import shutil
 import requests
 from flask import Flask
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from pyairtable import Table   # new Airtable client
+from selenium.webdriver.chrome.service import Service
+from pyairtable import Table
 
+# Debug environment
 print("[DEBUG] AIRTABLE_TOKEN =", os.getenv("AIRTABLE_TOKEN"))
 print("[DEBUG] AIRTABLE_BASE_ID =", os.getenv("AIRTABLE_BASE_ID"))
 print("[DEBUG] AIRTABLE_TABLE_NAME =", os.getenv("AIRTABLE_TABLE_NAME"))
 
-
+# Flask app
 app = Flask(__name__)
 
 @app.route("/")
@@ -34,13 +37,13 @@ RESUME_PATH = config.get("resume_path", "resume.pdf")
 USER_DATA   = config.get("user_data", {})
 CSV_PATH    = "applied_jobs.csv"
 
-# Airtable ENV + client
-AIRTABLE_TOKEN = "patzGCTaGr99tjLxi.f6f3645188bea152bec2f1d78a5f17cdbbc5f449aa09c5cc8f3225ccae9e9256"
-AIRTABLE_BASE_ID = "appnHuLf8g8SIpRgD"
-AIRTABLE_TABLE_NAME = "tblPkomZhDDhH3Gds"
-
+# Airtable API
+AIRTABLE_TOKEN = os.getenv("AIRTABLE_TOKEN", "your_token")
+AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID", "your_base_id")
+AIRTABLE_TABLE_NAME = os.getenv("AIRTABLE_TABLE_NAME", "your_table_name")
 airtable = Table(AIRTABLE_TOKEN, AIRTABLE_BASE_ID, AIRTABLE_TABLE_NAME)
 
+# Track previously applied jobs
 def load_applied_urls():
     if not os.path.exists(CSV_PATH):
         with open(CSV_PATH, "w", newline="") as f:
@@ -55,19 +58,19 @@ def log_application(job):
     ts  = datetime.datetime.utcnow().isoformat()
     row = [ts, job["title"], job["company"], job["url"]]
 
-    # 1) Append CSV
+    # Log to CSV
     with open(CSV_PATH, "a", newline="") as f:
         csv.writer(f).writerow(row)
     print(f"[CSV LOG] {','.join(row)}", flush=True)
     print(f"[LOG] Applied → {job['url']}", flush=True)
 
-    # 2) Airtable record
+    # Log to Airtable
     try:
         rec = airtable.create({
             "Time_stamp": ts,
-            "Title":      job["title"],
-            "Company":    job["company"],
-            "URL":        job["url"]
+            "Title": job["title"],
+            "Company": job["company"],
+            "URL": job["url"]
         })
         print(f"[AIRTABLE ✅] Logged as {rec['id']}", flush=True)
     except Exception as e:
@@ -76,22 +79,15 @@ def log_application(job):
 def location_allowed(text):
     raw = config.get("location_filter", "")
     if not raw.strip():
-        return True  # No filter = allow everything
-
+        return True
     locs = [loc.strip().lower() for loc in raw.split(",") if loc.strip()]
     text = text.lower()
+    return any(loc in text for loc in locs)
 
-    for loc in locs:
-        if loc in text:
-            return True
-
-    return False
-
-
-
+# Scrapers
 def scrape_remotive():
     print("[SCRAPE] Remotive...", flush=True)
-    url  = "https://remotive.io/remote-jobs/software-dev"
+    url = "https://remotive.io/remote-jobs/software-dev"
     jobs = []
     try:
         r = requests.get(url, timeout=20)
@@ -194,8 +190,6 @@ def scrape_remoteco():
         print(f"[ERROR] Remote.co: {e}", flush=True)
     return jobs
 
-
-
 def get_jobs():
     all_jobs = []
     for fn in (scrape_remotive, scrape_remoteok, scrape_weworkremotely, scrape_jobspresso, scrape_remoteco):
@@ -204,8 +198,7 @@ def get_jobs():
             all_jobs.extend(jobs)
         except Exception as e:
             print(f"[SCRAPE ERROR] {fn.__name__}: {e}", flush=True)
-        time.sleep(3)  # Delay between scrapers to reduce timeout risk
-
+        time.sleep(3)
     seen, unique = set(), []
     for j in all_jobs:
         if j["url"] not in seen:
@@ -213,39 +206,35 @@ def get_jobs():
             unique.append(j)
         if len(unique) >= MAX_RESULTS:
             break
-
     print(f"[SCRAPE] {len(unique)} unique jobs found", flush=True)
     return unique
-
-from selenium.webdriver.chrome.service import Service
-import shutil
-
-from selenium.webdriver.chrome.service import Service
-import shutil
-
-from selenium.webdriver.chrome.service import Service
-import shutil
 
 def apply_to_job(job):
     print(f"[AUTO] Applying → {job['url']}", flush=True)
 
-    print("Chrome path:", shutil.which("chromium"))
-    print("Chromedriver path:", shutil.which("chromedriver"))
+    chrome_path = shutil.which("chromium")
+    chromedriver_path = shutil.which("chromedriver")
+
+    print("✅ Chrome path:", chrome_path)
+    print("✅ Chromedriver path:", chromedriver_path)
+
+    if not chrome_path or not chromedriver_path:
+        print("[ERROR] Missing Chromium or Chromedriver. Ensure both are installed and in PATH.", flush=True)
+        return
 
     opts = Options()
     opts.add_argument("--headless=new")
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
+    opts.binary_location = chrome_path
 
-    # Explicit Service call (this is mandatory!)
-    service = Service("/usr/bin/chromedriver")
+    service = Service(chromedriver_path)
 
     try:
-        driver = webdriver.Chrome(service=service, options=opts)  # DO NOT omit service=
+        driver = webdriver.Chrome(service=service, options=opts)
         driver.get(job["url"])
         time.sleep(4)
 
-        # Autofill form inputs
         for inp in driver.find_elements(By.TAG_NAME, "input"):
             name = inp.get_attribute("name") or ""
             if "email" in name.lower():
@@ -257,41 +246,39 @@ def apply_to_job(job):
         for f in driver.find_elements(By.CSS_SELECTOR, "input[type='file']"):
             f.send_keys(os.path.abspath(RESUME_PATH))
         for btn in driver.find_elements(By.TAG_NAME, "button"):
-            t = btn.text.lower()
-            if "submit" in t or "apply" in t:
+            if "submit" in btn.text.lower() or "apply" in btn.text.lower():
                 btn.click()
                 break
-
-        print("[AUTO] Success", flush=True)
-
+        print("[AUTO] Success ✅", flush=True)
     except Exception as e:
-        print(f"[AUTO ERROR] {e}", flush=True)
-
+        print(f"[AUTO ERROR] ❌ {type(e).__name__}: {e}", flush=True)
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except:
+            pass
 
+def bot_cycle():
+    print("[CYCLE] Starting job scan...", flush=True)
+    applied_urls = load_applied_urls()
+    jobs = get_jobs()
+    for job in jobs:
+        if job["url"] in applied_urls:
+            print(f"[SKIP] Already applied → {job['url']}", flush=True)
+            continue
+        apply_to_job(job)
+        log_application(job)
+        time.sleep(3)
 
 def scheduler():
     bot_cycle()
     while True:
         time.sleep(30)
         bot_cycle()
-def bot_cycle():
-    print("[CYCLE] Starting job scan...", flush=True)
-    applied_urls = load_applied_urls()
-    jobs = get_jobs()
-
-    for job in jobs:
-        if job["url"] in applied_urls:
-            print(f"[SKIP] Already applied → {job['url']}", flush=True)
-            continue
-
-        apply_to_job(job)
-        log_application(job)
-        time.sleep(3)  # Pause between applications to avoid detection
 
 if __name__ == "__main__":
     th = threading.Thread(target=scheduler, daemon=True)
     th.start()
     print("[MAIN] Scheduler started", flush=True)
     app.run(host="0.0.0.0", port=3000)
+
