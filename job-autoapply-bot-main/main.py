@@ -276,6 +276,19 @@ def scheduler():
     while True:
         time.sleep(30)
         bot_cycle()
+def bot_cycle():
+    print("[CYCLE] Starting job scan...", flush=True)
+    applied_urls = load_applied_urls()
+    jobs = get_jobs()
+
+    for job in jobs:
+        if job["url"] in applied_urls:
+            print(f"[SKIP] Already applied → {job['url']}", flush=True)
+            continue
+
+        apply_to_job(job)
+        log_application(job)
+        time.sleep(3)  # Pause between applications to avoid detection
 
 if __name__ == "__main__":
     th = threading.Thread(target=scheduler, daemon=True)
