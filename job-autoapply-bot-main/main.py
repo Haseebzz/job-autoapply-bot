@@ -235,7 +235,8 @@ def apply_to_job(job):
     service = Service("/usr/bin/chromedriver")  # Explicit path
 
     try:
-        driver = webdriver.Chrome(service=service, options=opts)
+        from selenium.webdriver.chrome.service import Service
+        driver = webdriver.Chrome(service=Service("/usr/bin/chromedriver"), options=opts)
         driver.get(job["url"])
         time.sleep(4)
         for inp in driver.find_elements(By.TAG_NAME, "input"):
