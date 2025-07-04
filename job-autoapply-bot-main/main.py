@@ -223,10 +223,12 @@ import shutil
 from selenium.webdriver.chrome.service import Service
 import shutil
 
+from selenium.webdriver.chrome.service import Service
+import shutil
+
 def apply_to_job(job):
     print(f"[AUTO] Applying → {job['url']}", flush=True)
 
-    # Debug check
     print("Chrome path:", shutil.which("chromium"))
     print("Chromedriver path:", shutil.which("chromedriver"))
 
@@ -235,14 +237,15 @@ def apply_to_job(job):
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
 
-    # Explicit Service override (this is key!)
+    # Explicit Service call (this is mandatory!)
     service = Service("/usr/bin/chromedriver")
 
     try:
-        driver = webdriver.Chrome(service=service, options=opts)  # <- THIS LINE
+        driver = webdriver.Chrome(service=service, options=opts)  # DO NOT omit service=
         driver.get(job["url"])
         time.sleep(4)
 
+        # Autofill form inputs
         for inp in driver.find_elements(By.TAG_NAME, "input"):
             name = inp.get_attribute("name") or ""
             if "email" in name.lower():
@@ -266,6 +269,7 @@ def apply_to_job(job):
 
     finally:
         driver.quit()
+
 
 def scheduler():
     bot_cycle()
