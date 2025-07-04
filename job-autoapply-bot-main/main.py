@@ -217,25 +217,35 @@ def get_jobs():
     print(f"[SCRAPE] {len(unique)} unique jobs found", flush=True)
     return unique
 
+from selenium.webdriver.chrome.service import Service
+import shutil
 
 def apply_to_job(job):
     print(f"[AUTO] Applying → {job['url']}", flush=True)
+
+    print("CHROMEDRIVER_PATH =", os.getenv("CHROMEDRIVER_PATH", "/usr/bin/chromedriver"))
+    print("Chrome path:", shutil.which("chromium"))
+    print("Chromedriver path:", shutil.which("chromedriver"))
+
     opts = Options()
-    opts.add_argument("--headless")
+    opts.add_argument("--headless=new")  # More stable for newer versions
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
-    driver = webdriver.Chrome(options=opts)
+
+    service = Service("/usr/bin/chromedriver")  # Explicit path
+
     try:
+        driver = webdriver.Chrome(service=service, options=opts)
         driver.get(job["url"])
         time.sleep(4)
         for inp in driver.find_elements(By.TAG_NAME, "input"):
             name = inp.get_attribute("name") or ""
             if "email" in name.lower():
-                inp.send_keys(USER_DATA.get("email",""))
+                inp.send_keys(USER_DATA.get("email", ""))
             elif "name" in name.lower():
-                inp.send_keys(USER_DATA.get("full_name",""))
+                inp.send_keys(USER_DATA.get("full_name", ""))
             elif "phone" in name.lower():
-                inp.send_keys(USER_DATA.get("phone",""))
+                inp.send_keys(USER_DATA.get("phone", ""))
         for f in driver.find_elements(By.CSS_SELECTOR, "input[type='file']"):
             f.send_keys(os.path.abspath(RESUME_PATH))
         for btn in driver.find_elements(By.TAG_NAME, "button"):
